@@ -15,7 +15,6 @@ Info::Info() {
 }
 
 Info::~Info() {
-	// TODO Auto-generated destructor stub
 }
 
 Info::Info(const Info& info){
