@@ -29,7 +29,7 @@ public:
 	virtual ~Monitor();
 
 	void 	openImg(int, char**);
-	void 	videoCap(int, char**);
+	void 	videoCap(const char* const, int = 60);
 	void	videoRecord(const char*);
 	int 	getPixel(const Frame&, int, int);
 	void	getSobel(const Frame&, Frame&);

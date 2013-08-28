@@ -18,9 +18,12 @@ int main(int argc, char** argv){
 
 	system("ls");
 
+	char* filePath = "/home/ren/Pictures/";
+	char* fileName = "record";
+	char* filePostfix = ".avi";
 	Monitor m;
 //	m.openImg(argc, argv);
-	m.videoCap(argc, argv);
+	m.videoCap("/home/ren/Pictures/record.avi");
 //	m.videoRecord("/home/ren/Pictures/record.avi");
 	return 0;
 }

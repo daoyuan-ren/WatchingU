@@ -14,8 +14,8 @@
 using namespace std;
 
 Monitor::Monitor() {
-	grid_m 		= 4;
-	grid_n 		= 4;
+	grid_m 		= 5;
+	grid_n 		= 5;
 	frame_rate 	= 20;
 
 	//	video source 0 is from configuration
@@ -26,25 +26,24 @@ Monitor::Monitor() {
 }
 
 Monitor::~Monitor() {
-	// TODO Auto-generated destructor stub
 }
 
-void Monitor::openImg(int fileNum, char** fileName){
+void Monitor::openImg(int fileNum, char** file){
 //	Mat head, mask_pre, mask_post;
 //	Mat sobel, mobel, mobel1, sub_mm, sub_mh;
 
-	frame_pre.mFrame = imread(fileName[1], 1);
-	frame.mFrame = imread(fileName[2], 1);
-	frame_post.mFrame = imread(fileName[3], 1);
+	frame_pre.mFrame = imread(file[1], 1);
+	frame.mFrame = imread(file[2], 1);
+	frame_post.mFrame = imread(file[3], 1);
 
 
 	if(fileNum !=4 || !frame_pre.frame().data || !frame_post.frame().data || !frame.frame().data){
 		cout << "no image data." << endl;
 		return;
 	}
-	cout << "(" << 1 << ", " << fileName[1] << ", " << frame_pre.frame().rows << ", " << frame_pre.frame().cols  << ")" << endl;
-	cout << "(" << 2 << ", " << fileName[2] << ", " << frame.frame().rows << ", " << frame.frame().cols  << ")" << endl;
-	cout << "(" << 3 << ", " << fileName[3] << ", " << frame_post.frame().rows << ", " << frame_post.frame().cols  << ")" << endl;
+	cout << "(" << 1 << ", " << file[1] << ", " << frame_pre.frame().rows << ", " << frame_pre.frame().cols  << ")" << endl;
+	cout << "(" << 2 << ", " << file[2] << ", " << frame.frame().rows << ", " << frame.frame().cols  << ")" << endl;
+	cout << "(" << 3 << ", " << file[3] << ", " << frame_post.frame().rows << ", " << frame_post.frame().cols  << ")" << endl;
 
 	cvtColor(frame_pre.mFrame, frame_pre.mFrame, CV_BGR2GRAY);
 	cvtColor(frame_post.mFrame, frame_post.mFrame, CV_BGR2GRAY);
@@ -81,15 +80,12 @@ int Monitor::getPixel(const Frame& img, int x, int y){
 	return blue;
 }
 
-void Monitor::videoCap(int argc, char** argv){
+void Monitor::videoCap(const char* const file, int interval){
 	Mat current, back, fore, sub;
 	vector<vector<Point> > contours;
-	bool switchON = false;
 
 	unsigned int cnt = 0;
-	unsigned int pau_bg = 0;
-	unsigned int pau_ed = 0;
-	struct timeval start, end;
+	struct timeval start, pause, end;
 	long mtime, seconds, useconds;
 
 	subtractor.set("nmixtures", 3);
@@ -100,10 +96,8 @@ void Monitor::videoCap(int argc, char** argv){
 	writer.open("/home/ren/Pictures/record.avi", CV_FOURCC('D', 'I', 'V', 'X'), frame_rate, current.size());
 #endif
 
-
-
 	cap >> frame.mFrame;
-	writer.open("/home/ren/Pictures/record.avi", CV_FOURCC('D', 'I', 'V', 'X'), frame_rate, frame.mFrame.size());
+	writer.open(file, CV_FOURCC('D', 'I', 'V', 'X'), frame_rate, frame.mFrame.size());
 	if(!writer.isOpened()){
 				cerr << "failed to open video record." << endl;
 	}
@@ -111,22 +105,20 @@ void Monitor::videoCap(int argc, char** argv){
 		gettimeofday(&start, NULL);
 
 		cap >> frame.mFrame;
-		subtractor.operator ()(frame.mFrame, frame_pre.mFrame);
-		erode(frame_pre.mFrame, frame_pre.mFrame, Mat());
-		dilate(frame_pre.mFrame, frame_pre.mFrame, Mat());
-		frame_pre.show("Frame Pre");
-//		if(switchON == true)
-			writer << frame.mFrame;
-		if(detectDiff(frame_pre, "frame_pre", 2.0, 5, grid_m, grid_n)){
-//			switchON = true;
-//			pau_ed = pau_ed < pau_bg ? cnt : pau_ed;
-		}else{
-//			switchON = false;
-//			pau_bg = cnt;
-		}
-//		frame.show("Frame");
-		if(waitKey(30) > 0)
-			break;
+		frame.show("Frame");
+		if(++cnt % interval == 0){
+//			cnt = 0;
+			subtractor.operator ()(frame.mFrame, frame_pre.mFrame);
+			erode(frame_pre.mFrame, frame_pre.mFrame, Mat());
+			dilate(frame_pre.mFrame, frame_pre.mFrame, Mat());
+//			writer << frame.mFrame;
+			if(detectDiff(frame_pre, "frame_pre", 2.0, 5, grid_m, grid_n)){
+				gettimeofday(&pause, NULL);
+				seconds = pause.tv_sec - start.tv_sec;
+				cout << "<------------" << cnt << "----true-------------------->" << endl;
+			}else{
+				// TODO deal with the situation that no motion detected
+			}
 #ifdef DEBUG
 		cap >> current;
 		frame.mFrame = current;
@@ -163,20 +155,24 @@ void Monitor::videoCap(int argc, char** argv){
 		if(waitKey(30) >= 0)
 			break;
 #endif
+		}
+		writer << frame.mFrame;
+		if(waitKey(30) > 0)
+			break;
 		gettimeofday(&end, NULL);
 		seconds = end.tv_sec - start.tv_sec;
 		useconds = end.tv_usec - start.tv_usec;
 		mtime = ((seconds)*1000 + useconds/1000) + 0.5;
-		cout << "time: " << mtime << "ms" << endl;
+//		cout << "time: " << mtime << "ms" << endl;
 	}
 }
 
-void Monitor::videoRecord(const char* fileName){
+void Monitor::videoRecord(const char* file){
 	struct timeval start, end;
 	long mtime, seconds, useconds;
 
 	cap >> frame.mFrame;
-	writer.open(fileName, CV_FOURCC('D', 'I', 'V', 'X'), frame_rate, frame.mFrame.size());
+	writer.open(file, CV_FOURCC('D', 'I', 'V', 'X'), frame_rate, frame.mFrame.size());
 	if(!writer.isOpened()){
 		cerr << "failed to open video record." << endl;
 	}
